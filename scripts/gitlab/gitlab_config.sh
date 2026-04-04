@@ -5,9 +5,8 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$PROJECT_ROOT/scripts/vault/fetch_secrets.sh"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 
-echo "🛠️ Step 5: Enabling all import sources..."
+echo "Step 5: Enabling all import sources..."
 
-# Use SINGLE QUOTES (') here so Bash doesn't get confused by 'app'
 sudo docker exec gitlab-new2 gitlab-rails runner "
 app = ApplicationSetting.last
 app.update!(
@@ -22,7 +21,7 @@ app.update!(
   ]
 )"
 
-echo "🎫 Step 6: Generating root personal access token..."
+echo "Step 6: Generating root personal access token..."
 
 ROOT_TOKEN=$(openssl rand -hex 32)
 
@@ -35,4 +34,4 @@ token.save!
 "
 
 push_vault_secret "gitlab_root_token" "$ROOT_TOKEN"
-echo "✅ Root token stored in Vault."
+echo "Root token stored in Vault."
