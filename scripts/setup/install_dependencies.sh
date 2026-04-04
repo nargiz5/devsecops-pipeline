@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "⚙️ Installing dependencies..."
+echo "Installing dependencies..."
 
 sudo apt-get update
 
@@ -14,4 +14,4 @@ sudo apt-get install -y \
   openssl \
   git
 
-echo "✅ Dependencies installed!"
+echo "Dependencies installed!"
