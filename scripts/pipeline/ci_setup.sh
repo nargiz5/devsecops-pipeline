@@ -5,7 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$PROJECT_ROOT/scripts/vault/fetch_secrets.sh"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 
-echo "🛰️ Pulling Integration Secrets from Vault..."
+echo "Pulling Integration Secrets from Vault..."
 # Pulling everything we saved earlier
 GITLAB_URL=$(get_vault_secret "gitlab_url")
 ADMIN_TOKEN=$(get_vault_secret "gitlab_admin_token")
@@ -47,11 +47,11 @@ upload_to_defectdojo:
 EOF
 )
 
-echo "⏳ Waiting for repository to settle..."
+echo "Waiting for repository to settle..."
 sleep 15
 
 # 2. Upload the file via GitLab API (POST if new, PUT if updating)
-echo "🚀 Injecting .gitlab-ci.yml into Project #$PROJECT_ID..."
+echo "Injecting .gitlab-ci.yml into Project #$PROJECT_ID..."
 ENCODED_CI=$(jq -Rs . <<< "$CI_FILE_CONTENT")
 
 curl --silent --request PUT "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/files/.gitlab-ci.yml" \
@@ -63,7 +63,7 @@ curl --silent --request PUT "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/
     \"content\": $ENCODED_CI
   }"
 
-echo "🏁 Triggering initial security pipeline..."
+echo "Triggering initial security pipeline..."
 
-echo "✅ SUCCESS! The pipeline is now running."
+echo "SUCCESS! The pipeline is now running."
 echo "Check it here: $GITLAB_URL/dashboard/projects"
