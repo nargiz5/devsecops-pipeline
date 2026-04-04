@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "🐳 Installing Docker..."
+echo "Installing Docker..."
 
 if command -v docker &> /dev/null; then
-    echo "✅ Docker already installed"
+    echo "Docker already installed"
 else
-    echo "📦 Setting up Docker repository..."
+    echo "Setting up Docker repository..."
 
     sudo mkdir -p /etc/apt/keyrings
 
@@ -32,7 +32,7 @@ fi
 # -----------------------------
 # Ensure Docker is running
 # -----------------------------
-echo "🚀 Starting Docker..."
+echo "Starting Docker..."
 sudo systemctl enable docker
 sudo systemctl start docker
 
@@ -41,12 +41,12 @@ sudo systemctl start docker
 # -----------------------------
 sudo usermod -aG docker $USER
 
-echo "⚠️ Run 'newgrp docker' or relogin to use docker without sudo"
+echo "Run 'newgrp docker' or relogin to use docker without sudo"
 
 # -----------------------------
 # Test
 # -----------------------------
-echo "🧪 Testing Docker..."
+echo "Testing Docker..."
 sudo docker run hello-world
 
-echo "✅ Docker ready!"
+echo "Docker ready!"
