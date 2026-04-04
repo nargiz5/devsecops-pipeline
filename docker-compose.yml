@@ -1,0 +1,29 @@
+version: '3.6'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab-new2
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://192.168.64.2:9500'
+        gitlab_rails['initial_root_password'] = 'devsecops@2026!!'
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_external_url'] = 'http://192.168.64.2:'
+        registry_nginx['listen_port'] = 5003
+        nginx['listen_port'] = 80
+    ports:
+      - "9500:80"
+      - "5003:5003"
+    volumes:
+      - /srv/gitlab-new2/config:/etc/gitlab
+      - /srv/gitlab-new2/logs:/var/log/gitlab
+      - /srv/gitlab-new2/data:/var/opt/gitlab
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner-new2
+    restart: always
+    volumes:
+      - /srv/gitlab-runner-new2/config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
