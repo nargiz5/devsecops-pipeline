@@ -14,18 +14,18 @@ DOJO_URL=$(get_vault_secret "dojo_url")
 
 DOJO_DIR="$HOME/django-DefectDojo"
 
-echo "📥 Checking DefectDojo Repository..."
+echo "Checking DefectDojo Repository..."
 if [ -d "$DOJO_DIR" ]; then
-    echo "✅ Directory exists. Pulling latest changes instead of cloning..."
+    echo "Directory exists. Pulling latest changes instead of cloning..."
     cd "$DOJO_DIR"
-    git pull origin master || echo "⚠️ Warning: Git pull failed, proceeding with local copy."
+    git pull origin master || echo "Warning: Git pull failed, proceeding with local copy."
 else
-    echo "🚀 Cloning fresh repository..."
+    echo "Cloning fresh repository..."
     git clone --depth 1 https://github.com/DefectDojo/django-DefectDojo.git "$DOJO_DIR"
     cd "$DOJO_DIR"
 fi
 
-echo "🧹 Wiping Data for Fresh Environment..."
+echo "Wiping Data for Fresh Environment..."
 # This stops containers AND deletes the persistent volumes (databases/storage)
 sudo docker compose down -v --remove-orphans
 
@@ -33,21 +33,21 @@ sudo docker compose down -v --remove-orphans
 sudo docker volume prune -f
 
 
-echo "🧹 Cleaning up Docker conflicts..."
+echo "Cleaning up Docker conflicts..."
 sudo docker compose down || true
 sudo rm -rf /var/lib/docker/volumes/django-defectdojo_defectdojo_media/_data/threat 2>/dev/null || true
 
-echo "🚀 Starting DefectDojo..."
+echo "Starting DefectDojo..."
 sudo docker compose up -d
 
-echo "⏳ Waiting for DefectDojo API at $DOJO_URL..."
+echo "Waiting for DefectDojo API at $DOJO_URL..."
 until curl -s "$DOJO_URL/api/v2/system_settings/" > /dev/null; do
     echo "Dojo is booting... (15s sleep)"
     sleep 15
 done
 sleep 15 # Buffer for migrations
 
-echo "👤 Configuring Admin User..."
+echo "Configuring Admin User..."
 sudo docker compose exec -T uwsgi python3 manage.py shell -c "
 from django.contrib.auth.models import User
 try:
@@ -58,7 +58,7 @@ except User.DoesNotExist:
     User.objects.create_superuser('$DOJO_ADMIN_USER', 'admin@localhost', '$DOJO_ADMIN_PASSWORD')
 "
 
-echo "🔑 Extracting API Key..."
+echo "Extracting API Key..."
 DEFECTDOJO_API_KEY=$(sudo docker compose exec -T uwsgi python3 manage.py shell -c "
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
@@ -70,7 +70,7 @@ print(token.key)
 # Push API Key to Vault
 push_vault_secret "dojo_api_key" "$DEFECTDOJO_API_KEY"
 
-echo "🏗️ Creating Product & Engagement..."
+echo "Creating Product & Engagement..."
 # Create Product
 PRODUCT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/products/" \
   -H "Authorization: Token $DEFECTDOJO_API_KEY" \
@@ -96,4 +96,4 @@ ENGAGEMENT_ID=$(echo "$ENGAGEMENT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n
 push_vault_secret "dojo_product_id" "$PRODUCT_ID"
 push_vault_secret "dojo_engagement_id" "$ENGAGEMENT_ID"
 
-echo "✅ DefectDojo ready. IDs synced to Vault: Product=$PRODUCT_ID, Engagement=$ENGAGEMENT_ID"
+echo "DefectDojo ready. IDs synced to Vault: Product=$PRODUCT_ID, Engagement=$ENGAGEMENT_ID"
