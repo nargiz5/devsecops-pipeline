@@ -4,7 +4,7 @@ set -e
 # Load environment variables
 export $(grep -v '^#' ../../.env | xargs)
 
-echo "🔑 Injecting secrets into Vault..."
+echo "Injecting secrets into Vault..."
 
 curl --silent --header "X-Vault-Token: ${VAULT_TOKEN}" \
      --request POST \
@@ -30,4 +30,4 @@ curl --silent --header "X-Vault-Token: ${VAULT_TOKEN}" \
      }" \
      "${VAULT_URL}/v1/secret/data/devsecops"
 
-echo "✅ All secrets successfully injected into Vault!"
+echo "All secrets successfully injected into Vault!"
