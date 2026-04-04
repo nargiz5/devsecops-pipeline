@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 source "$PROJECT_ROOT/scripts/vault/fetch_secrets.sh"
 
-echo "🔐 Pulling GitLab Config from HashiCorp Vault..."
+echo "Pulling GitLab Config from HashiCorp Vault..."
 
 # 2. Pull the URLs and Credentials
 GITLAB_URL=$(get_vault_secret "gitlab_url")
@@ -18,12 +18,12 @@ DOCKERHUB_PAT=$(get_vault_secret "dockerhub_pat")
 
 # 3. Validation - Stop if Vault is empty
 if [ -z "$GITLAB_URL" ] || [ -z "$REGISTRY_URL" ]; then
-    echo "❌ Error: Could not find URLs in Vault. Did you run vault_inject.sh?"
+    echo "Error: Could not find URLs in Vault. Did you run vault_inject.sh?"
     exit 1
 fi
 
-echo "🚀 Using Vault Config: GitLab @ $GITLAB_URL"
-echo "📦 Creating GitLab Docker Compose..."
+echo "Using Vault Config: GitLab @ $GITLAB_URL"
+echo "Creating GitLab Docker Compose..."
 cat <<EOF > docker-compose.yml
 version: '3.6'
 services:
@@ -58,9 +58,9 @@ EOF
 
 sudo docker compose up -d
 
-echo "⏳ Waiting for GitLab API (this takes time)..."
+echo "Waiting for GitLab API (this takes time)..."
 until sudo docker exec gitlab-new2 gitlab-rails runner "puts User.first.username" &>/dev/null; do
     echo "GitLab booting... (15s sleep)"
     sleep 15
 done
-echo "✅ GitLab Container is up!"
+echo "GitLab Container is up!"
