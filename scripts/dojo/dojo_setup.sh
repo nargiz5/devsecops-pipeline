@@ -76,7 +76,7 @@ PRODUCT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/products/" \
   -H "Authorization: Token $DEFECTDOJO_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"name\": \"$IMPORT_PROJECT_NAME-$(date +%s)\", \"description\": \"Automated CI Project\", \"prod_type\": 1}")
-PRODUCT_ID=$(echo "$PRODUCT_RESPONSE" | jq -r '.id')
+PRODUCT_ID=$(echo "$PRODUCT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
 
 # Create Engagement
 ENGAGEMENT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/engagements/" \
@@ -90,7 +90,7 @@ ENGAGEMENT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/engagements/" \
     \"engagement_type\": \"Interactive\",
     \"title\": \"CI/CD Automated Scan\"
   }")
-ENGAGEMENT_ID=$(echo "$ENGAGEMENT_RESPONSE" | jq -r '.id')
+ENGAGEMENT_ID=$(echo "$ENGAGEMENT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
 
 # Push IDs to Vault
 push_vault_secret "dojo_product_id" "$PRODUCT_ID"
