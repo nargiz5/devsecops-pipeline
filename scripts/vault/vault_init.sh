@@ -4,7 +4,7 @@ set -e
 # Load environment variables
 export $(grep -v '^#' ../../.env | xargs)
 
-echo "🧹 Cleaning up old Vault containers..."
+echo "Cleaning up old Vault containers..."
 # Stop and remove any old Vault container
 sudo docker rm -f vault 2>/dev/null || true
 
@@ -13,7 +13,7 @@ rm -rf ~/vault-docker
 mkdir -p ~/vault-docker
 cd ~/vault-docker
 
-echo "📦 Deploying HashiCorp Vault container..."
+echo "Deploying HashiCorp Vault container..."
 cat <<EOF > docker-compose.yml
 version: '3.8'
 services:
@@ -33,10 +33,10 @@ EOF
 
 sudo docker compose up -d
 
-echo "⏳ Waiting for Vault API to become ready..."
+echo "Waiting for Vault API to become ready..."
 until curl -s ${VAULT_URL}/v1/sys/health | grep -q '"initialized":true'; do
     echo "Vault is booting..."
     sleep 2
 done
 
-echo "✅ Vault is running at ${VAULT_URL}"
+echo "Vault is running at ${VAULT_URL}"
