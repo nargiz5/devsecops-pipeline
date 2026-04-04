@@ -9,7 +9,7 @@ ROOT_TOKEN=$(get_vault_secret "gitlab_root_token")
 GITLAB_URL=$(get_vault_secret "gitlab_url")
 REGISTRY_URL=$(get_vault_secret "registry_url")
 
-echo "👤 Step 7: Creating Admin user..."
+echo "Step 7: Creating Admin user..."
 # Fetch admin details from Vault
 ADMIN_EMAIL=$(get_vault_secret "admin_email")
 ADMIN_PASSWORD=$(get_vault_secret "admin_password")
@@ -24,7 +24,7 @@ until curl_response=$(curl --silent --request POST "$GITLAB_URL/api/v4/users" \
     sleep 10
 done
 
-echo "🎫 Step 8: Generating Admin PAT..."
+echo "Step 8: Generating Admin PAT..."
 ADMIN_TOKEN=$(openssl rand -hex 32)
 sudo docker exec gitlab-new2 gitlab-rails runner "
 user = User.find_by_username('$ADMIN_USERNAME')
@@ -37,7 +37,7 @@ push_vault_secret "gitlab_admin_token" "$ADMIN_TOKEN"
 echo "⏳ Waiting 40 seconds for GitLab to sync permissions..."
 sleep 40
 
-echo "📦 Step 9: Creating remote import project..."
+echo "Step 9: Creating remote import project..."
 
 IMPORT_URL=$(get_vault_secret "import_url")
 IMPORT_PROJECT_NAME=$(get_vault_secret "import_project_name")
@@ -55,20 +55,20 @@ IMPORT_PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id')
 
 # Check if ID is valid. If not, the project probably failed to create.
 if [ "$IMPORT_PROJECT_ID" == "null" ] || [ -z "$IMPORT_PROJECT_ID" ]; then
-    echo "❌ Error: Project creation failed! Response: $RESPONSE"
+    echo "Error: Project creation failed! Response: $RESPONSE"
     exit 1
 fi
 
 push_vault_secret "gitlab_project_id" "$IMPORT_PROJECT_ID"
-echo "✅ Project created with ID: $IMPORT_PROJECT_ID"
+echo "Project created with ID: $IMPORT_PROJECT_ID"
 
 # Wait a few seconds for the database to index the new project
-echo "⏳ Waiting for project indexing..."
+echo "Waiting for project indexing..."
 sleep 5
 
 push_vault_secret "gitlab_project_id" "$IMPORT_PROJECT_ID"
 
-echo "👤 Step 10: Creating Normal User and adding to project..."
+echo "Step 10: Creating Normal User and adding to project..."
 USER_EMAIL=$(get_vault_secret "user_email")
 USER_PASSWORD=$(get_vault_secret "user_password")
 USER_USERNAME=$(get_vault_secret "user_username")
@@ -82,4 +82,4 @@ curl --silent --request POST "$GITLAB_URL/api/v4/projects/$IMPORT_PROJECT_ID/mem
     --header "PRIVATE-TOKEN: $ADMIN_TOKEN" \
     --data "user_id=$USER_ID&access_level=20"
 
-echo "✅ All users and projects successfully configured."
+echo "All users and projects successfully configured."
