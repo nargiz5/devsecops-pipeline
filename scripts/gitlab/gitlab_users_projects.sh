@@ -34,7 +34,7 @@ token.save!
 "
 push_vault_secret "gitlab_admin_token" "$ADMIN_TOKEN"
 
-echo "⏳ Waiting 40 seconds for GitLab to sync permissions..."
+echo "Waiting 40 seconds for GitLab to sync permissions..."
 sleep 40
 
 echo "Step 9: Creating remote import project..."
