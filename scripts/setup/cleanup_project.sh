@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "🧹 Starting full cleanup..."
+echo "Starting full cleanup..."
 
 # -----------------------------
 # Stop & Remove Containers
 # -----------------------------
-echo "🐳 Removing containers..."
+echo "Removing containers..."
 
 containers=(
   gitlab
@@ -28,7 +28,7 @@ done
 # -----------------------------
 # Stop Compose Stacks
 # -----------------------------
-echo "📦 Stopping docker-compose stacks..."
+echo "Stopping docker-compose stacks..."
 
 cd ~/docker-compose 2>/dev/null && sudo docker compose down -v --remove-orphans || true
 cd ~/django-DefectDojo 2>/dev/null && sudo docker compose down -v --remove-orphans || true
@@ -39,19 +39,19 @@ cd ~ || true
 # -----------------------------
 # Remove Volumes
 # -----------------------------
-echo "💾 Removing unused volumes..."
+echo "Removing unused volumes..."
 sudo docker volume prune -f || true
 
 # -----------------------------
 # Remove Networks
 # -----------------------------
-echo "🌐 Cleaning networks..."
+echo "Cleaning networks..."
 sudo docker network prune -f || true
 
 # -----------------------------
 # Remove Directories
 # -----------------------------
-echo "📁 Removing project directories..."
+echo "Removing project directories..."
 
 sudo rm -rf /srv/gitlab-new2
 sudo rm -rf /srv/gitlab-runner-new2
@@ -63,10 +63,10 @@ rm -rf ~/vault-docker
 # -----------------------------
 # Remove Dangling Images
 # -----------------------------
-echo "🧼 Cleaning unused images..."
+echo "Cleaning unused images..."
 #sudo docker image prune -af || true
 
 # -----------------------------
 # Final Message
 # -----------------------------
-echo "✅ Cleanup completed!"
+echo "Cleanup completed!"
