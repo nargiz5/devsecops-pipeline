@@ -5,7 +5,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 source "$PROJECT_ROOT/scripts/vault/fetch_secrets.sh"
 
-echo "🏃 Registering GitLab Runner..."
+echo "Registering GitLab Runner..."
 
 GITLAB_URL=$(get_vault_secret "gitlab_url")
 REGISTRY_URL=$(get_vault_secret "registry_url")
@@ -21,4 +21,4 @@ sudo docker exec gitlab-runner-new2 gitlab-runner register \
   --description "DevSecOps-Auto-Runner" \
   --docker-privileged
 
-echo "✅ Runner registered and active."
+echo "Runner registered and active."
