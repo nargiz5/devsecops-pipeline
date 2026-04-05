@@ -20,33 +20,38 @@ stages:
   - test
   - upload
 
-sast_scan:
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
+sast:
   stage: test
-  image: python:3.11-slim
-  script:
-    - pip install bandit
-    - bandit -r . -f json -o gl-sast-report.json || true
   artifacts:
+    reports:
+      sast: gl-sast-report.json
     paths:
       - gl-sast-report.json
+    when: always
 
 upload_to_defectdojo:
   stage: upload
   image: curlimages/curl:latest
+  needs:
+    - job: semgrep-sast  
+      artifacts: true
   script:
+    - ls -lh gl-sast-report.json  
     - |
-      curl -X POST "$DOJO_URL/api/v2/import-scan/" \\
-      -H "Authorization: Token $DOJO_KEY" \\
-      -F "scan_type=Bandit Scan" \\
-      -F "file=@gl-sast-report.json" \\
-      -F "engagement=$ENGAGEMENT_ID" \\
+      curl -X POST "$DOJO_URL/api/v2/import-scan/" \
+      -H "Authorization: Token $DOJO_KEY" \
+      -F "active=true" \
+      -F "verified=true" \
+      -F "scan_type=GitLab SAST Report" \
       -F "minimum_severity=High" \
-      -F "active=true" \\
-      -F "verified=true" \\
-      -F "close_old_findings=true"
+      -F "engagement=$ENGAGEMENT_ID" \
+      -F "file=@gl-sast-report.json"
+
 EOF
 )
-
 echo "Waiting for repository to settle..."
 sleep 15
 

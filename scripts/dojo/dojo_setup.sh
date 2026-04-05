@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
+# -----------------------------
 # 1. Setup Paths and Environment
+# -----------------------------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$PROJECT_ROOT/scripts/vault/fetch_secrets.sh"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
@@ -14,40 +16,60 @@ DOJO_URL=$(get_vault_secret "dojo_url")
 
 DOJO_DIR="$HOME/django-DefectDojo"
 
+# -----------------------------
+# 2. Get / Update DefectDojo
+# -----------------------------
 echo "Checking DefectDojo Repository..."
 if [ -d "$DOJO_DIR" ]; then
-    echo "Directory exists. Pulling latest changes instead of cloning..."
+    echo "Directory exists. Pulling latest changes..."
     cd "$DOJO_DIR"
-    git pull origin master || echo "Warning: Git pull failed, proceeding with local copy."
+    git pull origin master || echo "Git pull failed, using local copy."
 else
     echo "Cloning fresh repository..."
     git clone --depth 1 https://github.com/DefectDojo/django-DefectDojo.git "$DOJO_DIR"
     cd "$DOJO_DIR"
 fi
 
+# -----------------------------
+# 3. Clean Docker Environment (SAFE WAY)
+# -----------------------------
 echo "Wiping Data for Fresh Environment..."
-# This stops containers AND deletes the persistent volumes (databases/storage)
+
 sudo docker compose down -v --remove-orphans
 
-# Extra safety: Clean up specific Docker volumes if the 'down -v' missed anything
-sudo docker volume prune -f
+# Remove only DefectDojo-related volumes
+sudo docker volume rm $(docker volume ls -q | grep django-defectdojo) 2>/dev/null || true
 
+# Clean unused Docker resources
+sudo docker system prune -f
 
-echo "Cleaning up Docker conflicts..."
-sudo docker compose down || true
-sudo rm -rf /var/lib/docker/volumes/django-defectdojo_defectdojo_media/_data/threat 2>/dev/null || true
+# Small delay to avoid race conditions
+sleep 5
 
+# -----------------------------
+# 4. Start DefectDojo
+# -----------------------------
 echo "Starting DefectDojo..."
 sudo docker compose up -d
 
+# -----------------------------
+# 5. Wait for API
+# -----------------------------
 echo "Waiting for DefectDojo API at $DOJO_URL..."
+
 until curl -s "$DOJO_URL/api/v2/system_settings/" > /dev/null; do
     echo "Dojo is booting... (15s sleep)"
     sleep 15
 done
-sleep 15 # Buffer for migrations
 
+# Extra buffer (migrations, workers)
+sleep 15
+
+# -----------------------------
+# 6. Configure Admin User
+# -----------------------------
 echo "Configuring Admin User..."
+
 sudo docker compose exec -T uwsgi python3 manage.py shell -c "
 from django.contrib.auth.models import User
 try:
@@ -58,7 +80,11 @@ except User.DoesNotExist:
     User.objects.create_superuser('$DOJO_ADMIN_USER', 'admin@localhost', '$DOJO_ADMIN_PASSWORD')
 "
 
+# -----------------------------
+# 7. Get API Key
+# -----------------------------
 echo "Extracting API Key..."
+
 DEFECTDOJO_API_KEY=$(sudo docker compose exec -T uwsgi python3 manage.py shell -c "
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
@@ -67,18 +93,30 @@ token, created = Token.objects.get_or_create(user=user)
 print(token.key)
 " | grep -oE '[a-f0-9]{40}' | head -n 1)
 
-# Push API Key to Vault
+# Save to Vault
 push_vault_secret "dojo_api_key" "$DEFECTDOJO_API_KEY"
 
-echo "Creating Product & Engagement..."
-# Create Product
+# -----------------------------
+# 8. Create Product
+# -----------------------------
+echo "Creating Product..."
+
 PRODUCT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/products/" \
   -H "Authorization: Token $DEFECTDOJO_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"name\": \"$IMPORT_PROJECT_NAME-$(date +%s)\", \"description\": \"Automated CI Project\", \"prod_type\": 1}")
+  -d "{
+    \"name\": \"$IMPORT_PROJECT_NAME-$(date +%s)\",
+    \"description\": \"Automated CI Project\",
+    \"prod_type\": 1
+  }")
+
 PRODUCT_ID=$(echo "$PRODUCT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
 
-# Create Engagement
+# -----------------------------
+# 9. Create Engagement
+# -----------------------------
+echo "Creating Engagement..."
+
 ENGAGEMENT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/engagements/" \
   -H "Authorization: Token $DEFECTDOJO_API_KEY" \
   -H "Content-Type: application/json" \
@@ -90,10 +128,17 @@ ENGAGEMENT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/engagements/" \
     \"engagement_type\": \"Interactive\",
     \"title\": \"CI/CD Automated Scan\"
   }")
+
 ENGAGEMENT_ID=$(echo "$ENGAGEMENT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
 
-# Push IDs to Vault
+# Save IDs to Vault
 push_vault_secret "dojo_product_id" "$PRODUCT_ID"
 push_vault_secret "dojo_engagement_id" "$ENGAGEMENT_ID"
 
-echo "DefectDojo ready. IDs synced to Vault: Product=$PRODUCT_ID, Engagement=$ENGAGEMENT_ID"
+# -----------------------------
+# 10. Final Output
+# -----------------------------
+echo "✅ DefectDojo is READY!"
+echo "Product ID: $PRODUCT_ID"
+echo "Engagement ID: $ENGAGEMENT_ID"
+echo "API Key stored in Vault."
