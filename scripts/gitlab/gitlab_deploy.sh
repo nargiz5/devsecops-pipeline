@@ -16,13 +16,7 @@ ROOT_PASSWORD=$(get_vault_secret "root_password")
 DOCKERHUB_USERNAME=$(get_vault_secret "dockerhub_username")
 DOCKERHUB_PAT=$(get_vault_secret "dockerhub_pat")
 
-# 3. Validation - Stop if Vault is empty
-if [ -z "$GITLAB_URL" ] || [ -z "$REGISTRY_URL" ]; then
-    echo "Error: Could not find URLs in Vault. Did you run vault_inject.sh?"
-    exit 1
-fi
-
-echo "Using Vault Config: GitLab @ $GITLAB_URL"
+# -----------------------------------------------
 echo "Creating GitLab Docker Compose..."
 cat <<EOF > docker-compose.yml
 version: '3.6'
@@ -35,13 +29,28 @@ services:
       GITLAB_OMNIBUS_CONFIG: |
         external_url '$GITLAB_URL'
         gitlab_rails['initial_root_password'] = '$ROOT_PASSWORD'
+
+        # Registry
+        registry_external_url '$REGISTRY_URL'
+        registry['enable'] = true
+        registry_nginx['enable'] = true
+        registry_nginx['listen_port'] = 5005
+
         gitlab_rails['registry_enabled'] = true
-        gitlab_rails['registry_external_url'] = '$REGISTRY_URL'
-        registry_nginx['listen_port'] = 5003
+        gitlab_rails['registry_host'] = "localhost"
+        gitlab_rails['registry_port'] = 5005
+        gitlab_rails['registry_api_url'] = "http://localhost:5005"
+
+        # Paketlər və Nginx
+        gitlab_rails['packages_enabled'] = true
         nginx['listen_port'] = 80
+        nginx['listen_addresses'] = ['0.0.0.0']
+        gitlab_rails['dependency_proxy_enabled'] = true
+
     ports:
       - "9500:80"
-      - "5003:5003"
+      - "5002:5005"
+
     volumes:
       - /srv/gitlab-new2/config:/etc/gitlab
       - /srv/gitlab-new2/logs:/var/log/gitlab
@@ -64,3 +73,4 @@ until sudo docker exec gitlab-new2 gitlab-rails runner "puts User.first.username
     sleep 15
 done
 echo "GitLab Container is up!"
+                                    

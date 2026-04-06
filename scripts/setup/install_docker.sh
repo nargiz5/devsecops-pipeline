@@ -46,6 +46,16 @@ echo "Run 'newgrp docker' or relogin to use docker without sudo"
 # -----------------------------
 # Test
 # -----------------------------
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+    
+    # --- ADD THIS LOGIC HERE ---
+    echo "Logging into Docker Hub to avoid rate limits..."
+    echo "$DOCKERHUB_PAT" | sudo docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+else
+    echo "Warning: .env file not found at $PROJECT_ROOT/.env"
+fi
 echo "Testing Docker..."
 sudo docker run hello-world
 

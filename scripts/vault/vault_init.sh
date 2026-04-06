@@ -7,7 +7,6 @@ export $(grep -v '^#' ../../.env | xargs)
 echo "Cleaning up old Vault containers..."
 # Stop and remove any old Vault container
 sudo docker rm -f vault 2>/dev/null || true
-
 # Remove old Vault directory if exists
 rm -rf ~/vault-docker
 mkdir -p ~/vault-docker
