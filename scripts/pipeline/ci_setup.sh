@@ -23,8 +23,7 @@ stages:
 include:
   - template: Jobs/SAST.gitlab-ci.yml
 
-sast:
-  stage: test
+semgrep-sast:
   artifacts:
     reports:
       sast: gl-sast-report.json
