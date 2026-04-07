@@ -35,15 +35,35 @@ echo "creating image in container registry"
 sudo docker pull python:3.11-slim
 sudo docker pull curlimages/curl:latest
 # Pull official semgrep image
-sudo docker pull registry.gitlab.com/security-products/semgrep:latest
+# =============================
+#  Build & Push SAST Image (FIXED)
+# =============================
+echo " Building Semgrep image (single-platform fix)..."
 
-# Tag for your GitLab container registry
-sudo docker tag registry.gitlab.com/security-products/semgrep:latest $IMAGE_PREFIX/semgrepp:latest
-# Login to GitLab registry (use your GitLab username and personal access token with read/write registry)
-echo "$REGISTRY_PASS" | sudo docker login $PRIVATE_REGISTRY -u "$REGISTRY_USER" --password-stdin
-# Push the image
-sudo docker push $IMAGE_PREFIX/semgrepp:latest
+# Disable BuildKit to avoid manifest issues
+export DOCKER_BUILDKIT=0
 
+# Create temporary Dockerfile
+TMP_DOCKERFILE=$(mktemp)
+
+cat <<EOF > $TMP_DOCKERFILE
+FROM registry.gitlab.com/security-products/semgrep:latest
+EOF
+
+# Build image (forces single-platform amd64)
+sudo docker build -f $TMP_DOCKERFILE -t "$IMAGE_PREFIX/semgrepp:latest" .
+
+# Cleanup temp Dockerfile
+rm -f $TMP_DOCKERFILE
+
+# Login to registry
+echo "$REGISTRY_PASS" | sudo docker login "$PRIVATE_REGISTRY" -u "$REGISTRY_USER" --password-stdin
+
+# Push image
+echo " Pushing image to private registry..."
+sudo docker push "$IMAGE_PREFIX/semgrepp:latest"
+
+echo "✅ Semgrep image built & pushed successfully!"
 
 
 # Encode credentials for DOCKER_AUTH_CONFIG
