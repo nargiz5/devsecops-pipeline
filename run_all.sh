@@ -6,12 +6,19 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 
 # 2. Execution Flow
+
 echo "Step 0: OS Prep"
 bash scripts/setup/install_dependencies.sh
 bash scripts/setup/install_docker.sh
-
 echo "Step 1: Cleanup"
 bash scripts/setup/cleanup_project.sh
+
+bash scripts/setup/insecure_reg.sh
+
+echo "Waiting for Docker daemon..."
+until sudo docker info >/dev/null 2>&1; do
+  sleep 1
+done
 
 echo "Step 2: Vault"
 bash scripts/vault/vault_init.sh
