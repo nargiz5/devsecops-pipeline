@@ -1,0 +1,42 @@
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url "http://${HOST_IP}:${GITLAB_PORT}"
+        gitlab_rails['initial_root_password'] = '${ROOT_PASSWORD}'
+        registry_external_url "http://${HOST_IP}:${REGISTRY_PORT}"
+        registry['enable'] = true
+        registry_nginx['enable'] = true
+        registry_nginx['listen_port'] = 5005
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_host'] = "localhost"
+        gitlab_rails['registry_port'] = 5005
+        gitlab_rails['registry_api_url'] = "http://localhost:5005"
+        gitlab_rails['packages_enabled'] = true
+        nginx['listen_port'] = 80
+        nginx['listen_addresses'] = ['0.0.0.0']
+        gitlab_rails['dependency_proxy_enabled'] = true
+    ports:
+      - "9500:80"
+      - "5002:5005"
+    volumes:
+      - gitlab_data:/var/opt/gitlab
+    networks:
+      - devsecops-net
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: always
+    volumes:
+      - gitlab_runner_data:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devsecops-net
+
+# --- ADD THESE SECTIONS AT THE BOTTOM ---
+
+

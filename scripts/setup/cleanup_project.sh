@@ -2,7 +2,8 @@
 set -euo pipefail
 
 echo "Starting full cleanup..."
-
+# The -v flag is critical; it deletes the persistent data volumes
+sudo docker compose down -v
 # -----------------------------
 # Stop & Remove Containers
 # -----------------------------
@@ -53,8 +54,9 @@ sudo docker network prune -f || true
 # -----------------------------
 echo "Removing project directories..."
 
-sudo rm -rf /srv/gitlab-new2
-sudo rm -rf /srv/gitlab-runner-new2
+sudo rm -rf /var/opt/gitlab
+
+sudo rm -rf /etc/gitlab-runner
 
 rm -rf ~/docker-compose
 rm -rf ~/django-DefectDojo

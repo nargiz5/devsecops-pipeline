@@ -26,7 +26,7 @@ done
 
 echo "Step 8: Generating Admin PAT..."
 ADMIN_TOKEN=$(openssl rand -hex 32)
-sudo docker exec gitlab-new2 gitlab-rails runner "
+sudo docker exec gitlab gitlab-rails runner "
 user = User.find_by_username('$ADMIN_USERNAME')
 token = user.personal_access_tokens.create!(scopes: [:api, :read_api, :read_repository, :write_repository, :sudo], name: 'admin-token', expires_at: Date.today + 365)
 token.set_token('$ADMIN_TOKEN')

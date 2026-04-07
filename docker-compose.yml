@@ -1,0 +1,16 @@
+include:
+  - path: ./scripts/vault/vault.yml
+    project_directory: .  # Force it to use the root as the base
+    env_file: .env        # Force it to use the root .env file
+  - path: ./scripts/gitlab/gitlab.yml
+    project_directory: .
+    env_file: .env
+
+networks:
+  devsecops-net:
+    name: devsecops-net
+    driver: bridge
+
+volumes:
+  gitlab_data:
+  gitlab_runner_data:

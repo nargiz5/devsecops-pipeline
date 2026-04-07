@@ -7,7 +7,7 @@ export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
 
 echo "Step 5: Enabling all import sources..."
 
-sudo docker exec gitlab-new2 gitlab-rails runner "
+sudo docker exec gitlab gitlab-rails runner "
 app = ApplicationSetting.last
 app.update!(
   import_sources: [
@@ -25,7 +25,7 @@ echo "Step 6: Generating root personal access token..."
 
 ROOT_TOKEN=$(openssl rand -hex 32)
 
-sudo docker exec gitlab-new2 gitlab-rails runner "
+sudo docker exec gitlab gitlab-rails runner "
 user = User.find_by_username('root')
 user.personal_access_tokens.where(name: 'boot-token').destroy_all
 token = user.personal_access_tokens.create!(scopes: [:api, :sudo], name: 'boot-token', expires_at: Date.today + 365)

@@ -20,6 +20,15 @@ until sudo docker info >/dev/null 2>&1; do
   sleep 1
 done
 
+echo "Step 1.5: Pre-requisites"
+if [ ! -d "scripts/dojo/defectdojo" ]; then
+    git clone https://github.com/DefectDojo/django-DefectDojo.git scripts/dojo/defectdojo
+fi
+
+echo "Step 2: Start Docker Compose"
+docker compose up -d
+
+
 echo "Step 2: Vault"
 bash scripts/vault/vault_init.sh
 bash scripts/vault/vault_inject.sh
