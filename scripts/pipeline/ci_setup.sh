@@ -54,6 +54,7 @@ EOF
 )
 echo "Waiting for repository to settle..."
 sleep 15
+sudo docker pull curlimages/curl:latest
 
 # 2. Upload the file via GitLab API (POST if new, PUT if updating)
 echo "Injecting .gitlab-ci.yml into Project #$PROJECT_ID..."
