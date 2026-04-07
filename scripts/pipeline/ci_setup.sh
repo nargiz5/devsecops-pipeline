@@ -33,7 +33,7 @@ IMAGE_PREFIX="$PRIVATE_REGISTRY/adminuser/django-nv-import/sast-tools"
 echo "creating image in container registry"
 
 sudo docker pull python:3.11-slim
-
+sudo docker pull curlimages/curl:latest
 # Pull official semgrep image
 sudo docker pull registry.gitlab.com/security-products/semgrep:latest
 
