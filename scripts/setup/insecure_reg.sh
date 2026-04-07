@@ -1,7 +1,9 @@
 #!/bin/bash
 # simplified_insecure_reg.sh
+export $(grep -v '^#' ../../.env | xargs)
 
-INSECURE_REGISTRY="10.22.255.62:5002"
+INSECURE_REGISTRY="${HOST_IP}:${REGISTRY_PORT}"
+
 DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
 
 echo "Configuring Docker..."
