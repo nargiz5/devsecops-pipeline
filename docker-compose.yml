@@ -5,6 +5,9 @@ include:
   - path: ./scripts/gitlab/gitlab.yml
     project_directory: .
     env_file: .env
+  - path: ./scripts/grafana/grafana.yml  # <--- Yeni əlavə
+    project_directory: .
+    env_file: .env
 
 networks:
   devsecops-net:
@@ -14,3 +17,4 @@ networks:
 volumes:
   gitlab_data:
   gitlab_runner_data:
+  grafana_data:

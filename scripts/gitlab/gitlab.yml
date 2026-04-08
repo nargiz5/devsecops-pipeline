@@ -37,6 +37,5 @@ services:
     networks:
       - devsecops-net
 
-# --- ADD THESE SECTIONS AT THE BOTTOM ---
 
 

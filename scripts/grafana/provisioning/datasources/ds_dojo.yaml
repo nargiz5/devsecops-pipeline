@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: DefectDojo_Postgres
+    type: postgres
+    # Diqqət: DefectDojo rəsmi Docker strukturunda servis adı 'postgres' olur
+    url: django-defectdojo-postgres-1:5432
+    database: defectdojo
+    user: defectdojo
+    secureJsonData:
+      password: defectdojo
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 15
+    editable: true

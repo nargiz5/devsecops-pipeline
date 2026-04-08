@@ -20,6 +20,7 @@ containers=(
   celery
   mysql
   redis
+  grafana
 )
 
 for c in "${containers[@]}"; do
@@ -37,6 +38,11 @@ cd ~/vault-docker 2>/dev/null && sudo docker compose down -v --remove-orphans ||
 
 cd ~ || true
 
+# Grafana volume-nu spesifik silmək üçün 
+cd ~/devsecops-pipeline 2>/dev/null && sudo docker compose down -v --remove-orphans || true
+
+
+cd ~ || true
 # -----------------------------
 # Remove Volumes
 # -----------------------------
