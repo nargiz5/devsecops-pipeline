@@ -19,6 +19,10 @@ PRIVATE_REGISTRY=$(get_vault_secret "registry_url")
 REGISTRY_USER=$(get_vault_secret "admin_username")
 REGISTRY_PASS=$(get_vault_secret "admin_password")
 
+# Telegram Secrets
+TELEGRAM_TOKEN=$(get_vault_secret "telegram_token")
+TELEGRAM_CHAT_ID=$(get_vault_secret "telegram_chat_id")
+
 # Clean URL
 PRIVATE_REGISTRY=$(echo "$PRIVATE_REGISTRY" | sed -e 's|^http://||' -e 's|^https://||')
 IMAGE_PREFIX="$PRIVATE_REGISTRY/adminuser/django-nv-import/sast-tools"
@@ -51,9 +55,12 @@ cat <<EOF > $CI_OUTPUT
 stages:
   - test
   - upload
-
+  - gate
 variables:
   SAST_ANALYZER_IMAGE_PREFIX: "$IMAGE_PREFIX"
+  TELEGRAM_TOKEN: "$TELEGRAM_TOKEN"
+  TELEGRAM_CHAT_ID: "$TELEGRAM_CHAT_ID"
+
   DOCKER_AUTH_CONFIG: >-
     {
       "auths": {
@@ -132,7 +139,53 @@ upload-test-2:
       -F "test_title=Semgrep Scan - Test 2"
       -F "auto_create_context=true"
       -F "file=@gl-sast-report-2.json"
+
+# --- SECURITY GATE (Test 1 Only) ---
+# ---------------- SECURITY GATE (Test 1 Focus Only) ----------------
+security-gate:
+  stage: gate
+  image: curlimages/curl:latest
+  needs: ["upload-test-1"]
+  script:
+    - |
+      echo "🔍 Verifying security status for Test 1..."
+      
+      # 1. Query DefectDojo for active/verified findings
+      RESPONSE=\$(curl -s -H "Authorization: Token $DOJO_KEY" \
+        "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
+      
+      # 2. Extract count and ensure it defaults to 0 if empty/null
+      COUNT=\$(echo \$RESPONSE | grep -o '"count":[0-9]*' | cut -d: -f2)
+      COUNT=\${COUNT:-0}
+      
+      echo "Findings Count: \$COUNT"
+
+      if [ "\$COUNT" -gt 0 ]; then
+        # ❌ FAIL LOGIC (Echo only, no exit 1)
+        HASHES=\$(echo \$RESPONSE | grep -o '"hash_code":"[^"]*"' | cut -d'"' -f4 | head -n 5)
+        
+        MSG="❌ *Security Gate Warning (Test 1)*%0AFound \$COUNT active vulnerabilities.%0A%0A*Top Hashes:*%0A\$HASHES%0A%0A_Pipeline continuing in Soft Fail mode._"
+        
+        curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
+             -d "chat_id=\${TELEGRAM_CHAT_ID}" -d "text=\$MSG" -d "parse_mode=Markdown"
+             
+        echo "GATE STATUS: WARNING - \$COUNT active findings remain. Review in Dojo."
+      else
+        # ✅ SUCCESS LOGIC
+        MSG="✅ *Security Gate Passed (Test 1)*%0ANo active findings (All fixed or False Positive)."
+        
+        curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
+             -d "chat_id=\${TELEGRAM_CHAT_ID}" -d "text=\$MSG" -d "parse_mode=Markdown"
+             
+        echo "GATE STATUS: SUCCESS - No active findings."
+      fi
+      
+      # Always exit 0 to keep the GitLab pipeline Green
+      exit 0
+
+
 EOF
+
 
 # Push to GitLab
 ENCODED_CI=$(jq -Rs . < "$CI_OUTPUT")

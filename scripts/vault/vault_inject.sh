@@ -25,7 +25,9 @@ curl --silent --header "X-Vault-Token: ${VAULT_TOKEN}" \
          \"import_url\": \"${IMPORT_URL}\",
          \"import_project_name\": \"${IMPORT_PROJECT_NAME}\",
          \"dojo_admin_user\": \"${DOJO_ADMIN_USER}\",
-         \"dojo_admin_password\": \"${DOJO_ADMIN_PASSWORD}\"
+         \"dojo_admin_password\": \"${DOJO_ADMIN_PASSWORD}\",
+         \"telegram_token\": \"${TELEGRAM_BOT_TOKEN}\",
+         \"telegram_chat_id\": \"${TELEGRAM_CHAT_ID}\"
        }
      }" \
      "${VAULT_URL}/v1/secret/data/devsecops"

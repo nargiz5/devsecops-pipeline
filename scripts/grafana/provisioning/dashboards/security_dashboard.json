@@ -45,7 +45,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT f.title AS \"Finding\", f.severity AS \"Severity\", f.component_name AS \"Component\", t.title AS \"Test\", e.name AS \"Engagement\", CASE WHEN f.false_p = true THEN 'False Positive' WHEN f.risk_accepted = true THEN 'Accepted' ELSE 'Active' END AS \"Status\", f.date AS \"Date\" FROM dojo_finding f JOIN dojo_test t ON f.test_id = t.id JOIN dojo_engagement e ON t.engagement_id = e.id WHERE f.active = true ORDER BY f.date DESC LIMIT 10;",
+          "rawSql": "SELECT f.title AS \"Finding\", f.severity AS \"Severity\", f.component_name AS \"Component\", t.title AS \"Test\", e.name AS \"Engagement\", CASE WHEN f.false_p = true THEN 'False Positive' WHEN f.risk_accepted = true THEN 'Accepted' ELSE 'Active' END AS \"Status\", f.date AS \"Date\" FROM dojo_finding f JOIN dojo_test t ON f.test_id = t.id JOIN dojo_engagement e ON t.engagement_id = e.id WHERE f.active = true ORDER BY f.date DESC;",
           "refId": "A"
         }
       ]
