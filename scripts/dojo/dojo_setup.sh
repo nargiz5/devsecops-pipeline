@@ -16,6 +16,12 @@ DOJO_URL=$(get_vault_secret "dojo_url")
 
 DOJO_DIR="$HOME/django-DefectDojo"
 
+# Generate unique product and engagement names
+TIMESTAMP=$(date +%s)
+PRODUCT_NAME="$IMPORT_PROJECT_NAME-$TIMESTAMP"
+ENGAGEMENT_NAME="CI-CD Scan $TIMESTAMP"
+
+
 # -----------------------------
 # 2. Get / Update DefectDojo
 # -----------------------------
@@ -105,12 +111,14 @@ PRODUCT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/products/" \
   -H "Authorization: Token $DEFECTDOJO_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"$IMPORT_PROJECT_NAME-$(date +%s)\",
+    \"name\": \"$PRODUCT_NAME\",
     \"description\": \"Automated CI Project\",
     \"prod_type\": 1
   }")
 
 PRODUCT_ID=$(echo "$PRODUCT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
+push_vault_secret "dojo_product_name" "$PRODUCT_NAME"
+
 
 # -----------------------------
 # 9. Create Engagement
@@ -126,10 +134,12 @@ ENGAGEMENT_RESPONSE=$(curl -s -X POST "$DOJO_URL/api/v2/engagements/" \
     \"product\": $PRODUCT_ID,
     \"status\": \"In Progress\",
     \"engagement_type\": \"Interactive\",
-    \"title\": \"CI/CD Automated Scan\"
+    \"name\": \"$ENGAGEMENT_NAME\"
   }")
 
 ENGAGEMENT_ID=$(echo "$ENGAGEMENT_RESPONSE" | grep -oP '"id":\s*\K\d+' | head -n 1)
+
+push_vault_secret "dojo_engagement_name" "$ENGAGEMENT_NAME"
 
 # Save IDs to Vault
 push_vault_secret "dojo_product_id" "$PRODUCT_ID"
