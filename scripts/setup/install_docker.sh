@@ -22,7 +22,7 @@ else
 
     sudo apt-get update
 
-    sudo apt-get install -y \
+    sudo apt-get install -y --fix-missing \
       docker-ce \
       docker-ce-cli \
       containerd.io \

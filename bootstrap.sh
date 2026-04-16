@@ -37,6 +37,7 @@ until sudo docker exec gitlab gitlab-rails runner "puts User.first.username" &>/
 done
 echo "GitLab is ready!"
 
+
 echo "=== Step 4: GitLab config (optional helpers) ==="
 bash scripts/gitlab/gitlab_config.sh
 bash scripts/gitlab/gitlab_users_projects.sh

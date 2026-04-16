@@ -71,7 +71,7 @@ variables:
     }
 
 # ---------------- TEST 1 ----------------
-semgrep-sast-1:
+semgrep-sast:
   stage: test
   image: \$SAST_ANALYZER_IMAGE_PREFIX/semgrepp:latest
   artifacts:
@@ -85,11 +85,11 @@ semgrep-sast-1:
     - mv gl-sast-report.json gl-sast-report-1.json
     - ls -la
 
-upload-test-1:
+upload-test:
   stage: upload
   image: curlimages/curl:latest
   needs:
-    - job: semgrep-sast-1
+    - job: semgrep-sast
       artifacts: true
   script:
     - >
@@ -105,83 +105,48 @@ upload-test-1:
       -F "auto_create_context=true"
       -F "file=@gl-sast-report-1.json"
 
-# ---------------- TEST 2 ----------------
-semgrep-sast-2:
-  stage: test
-  image: \$SAST_ANALYZER_IMAGE_PREFIX/semgrepp:latest
-  artifacts:
-    reports:
-      sast: gl-sast-report-2.json
-    paths:
-      - gl-sast-report-2.json
-    when: always
-  script:
-    - /analyzer run
-    - mv gl-sast-report.json gl-sast-report-2.json
-    - ls -la
-
-upload-test-2:
-  stage: upload
-  image: curlimages/curl:latest
-  needs:
-    - job: semgrep-sast-2
-      artifacts: true
-  script:
-    - >
-      curl -X POST "$DOJO_URL/api/v2/reimport-scan/"
-      -H "Authorization: Token $DOJO_KEY"
-      -F "active=true"
-      -F "verified=true"
-      -F "scan_type=GitLab SAST Report"
-      -F "minimum_severity=High"
-      -F "product_name=$PRODUCT_NAME"
-      -F "engagement_name=$ENGAGEMENT_NAME"
-      -F "test_title=Semgrep Scan - Test 2"
-      -F "auto_create_context=true"
-      -F "file=@gl-sast-report-2.json"
-
-# --- SECURITY GATE (Test 1 Only) ---
-# ---------------- SECURITY GATE (Test 1 Focus Only) ----------------
 security-gate:
   stage: gate
-  image: curlimages/curl:latest
-  needs: ["upload-test-1"]
+  image: alpine:latest
+  needs: ["upload-test"]
   script:
+    - apk add --no-cache curl jq
     - |
-      echo "🔍 Verifying security status for Test 1..."
-      
-      # 1. Query DefectDojo for active/verified findings
-      RESPONSE=\$(curl -s -H "Authorization: Token $DOJO_KEY" \
-        "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
-      
-      # 2. Extract count and ensure it defaults to 0 if empty/null
-      COUNT=\$(echo \$RESPONSE | grep -o '"count":[0-9]*' | cut -d: -f2)
-      COUNT=\${COUNT:-0}
-      
-      echo "Findings Count: \$COUNT"
+      echo "🔍 Verifying security status..."
 
-      if [ "\$COUNT" -gt 0 ]; then
-        # ❌ FAIL LOGIC (Echo only, no exit 1)
-        HASHES=\$(echo \$RESPONSE | grep -o '"hash_code":"[^"]*"' | cut -d'"' -f4 | head -n 5)
-        
-        MSG="❌ *Security Gate Warning (Test 1)*%0AFound \$COUNT active vulnerabilities.%0A%0A*Top Hashes:*%0A\$HASHES%0A%0A_Pipeline continuing in Soft Fail mode._"
-        
-        curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
-             -d "chat_id=\${TELEGRAM_CHAT_ID}" -d "text=\$MSG" -d "parse_mode=Markdown"
-             
-        echo "GATE STATUS: WARNING - \$COUNT active findings remain. Review in Dojo."
+      # 1. Query DefectDojo
+      RESPONSE=$(curl -s -H "Authorization: Token $DOJO_KEY" \
+        "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
+
+      # 2. Extract Count
+      COUNT=$(echo "$RESPONSE" | jq '.count // 0')
+
+      if [ "$COUNT" -gt 0 ]; then
+        # Fetch titles, format as bullet points, and escape HTML special characters
+        VULN_LIST=$(echo "$RESPONSE" | jq -r '.results[0:5] | .[] | "• " + .title' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+
+        # Build the message block - No special commands, just a standard variable
+        MSG="🚨 <b>SECURITY GATE ALERT</b>
+
+        <b>Project:</b> <code>$PRODUCT_NAME</code>
+        <b>Findings:</b> $COUNT High vulnerabilities
+
+        <b>Top Vulnerabilities:</b>
+        $VULN_LIST"
+
       else
-        # ✅ SUCCESS LOGIC
-        MSG="✅ *Security Gate Passed (Test 1)*%0ANo active findings (All fixed or False Positive)."
-        
-        curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
-             -d "chat_id=\${TELEGRAM_CHAT_ID}" -d "text=\$MSG" -d "parse_mode=Markdown"
-             
-        echo "GATE STATUS: SUCCESS - No active findings."
+        MSG="✅ <b>SECURITY GATE PASSED</b>
+
+        <b>Project:</b> $PRODUCT_NAME
+        No active findings detected."
       fi
-      
-      # Always exit 0 to keep the GitLab pipeline Green
-      exit 0
+
+      # 3. Send to Telegram
+      # --data-urlencode is vital here to handle the newlines in the MSG variable
+      curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+        --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
+        --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "text=$MSG"
 
 
 EOF

@@ -3,9 +3,9 @@ set -euo pipefail
 
 echo "Installing dependencies..."
 
-sudo apt-get update
+sudo apt-get update --fix-missing || true
 
-sudo apt-get install -y \
+sudo apt-get install -y --fix-missing \
   ca-certificates \
   curl \
   gnupg \
@@ -13,5 +13,8 @@ sudo apt-get install -y \
   jq \
   openssl \
   git
+
+
+
 
 echo "Dependencies installed!"
