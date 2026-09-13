@@ -200,17 +200,6 @@ To set up a bot: use [@BotFather](https://t.me/BotFather) on Telegram, create a 
 
 ---
 
-## ⚠️ Security Notes
-
-This project is designed as a **lab environment**. Before using it in any shared or production context:
-
-- `.env` is gitignored by default in this repo; `.env.example` provides the schema with no real values
-- Use a properly initialized and unsealed Vault setup, and never reuse a root token across environments
-- Move CI/CD secrets (Telegram token, DefectDojo API key) to **GitLab CI/CD masked variables**
-- Enable TLS on all service endpoints
-- Restrict network access to the host
-
----
 
 ## 📄 License
 
