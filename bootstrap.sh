@@ -47,13 +47,10 @@ sudo rm -rf /var/lib/docker/volumes/django-defectdojo_defectdojo_media/_data/thr
 bash scripts/dojo/dojo_setup.sh
 
 echo "=== Step 5.5: Grafana ==="
-# Grafana-nı ayağa qaldır
 sudo -E docker compose --env-file .env up -d grafana
 
-# Grafana-nın hazır olmasını gözlə (isteğe bağlı)
 sleep 20
 echo "Grafana is ready! Access at http://${HOST_IP}:3000"
-# Dojo şəbəkəsini tap və qoş
 DOJO_NET=$(sudo docker network ls --format "{{.Name}}" | grep defectdojo | head -n 1)
 if [ ! -z "$DOJO_NET" ]; then
     echo "Connecting Grafana to $DOJO_NET..."
@@ -63,15 +60,12 @@ else
 fi
 
 echo "=== Step 5.6: Auto-verifying Data Source via API ==="
-# Grafana-nın tam hazır olması üçün 5 saniyə gözləyirik
 sleep 5
 
-# 1. Data Source-un UID-sini dinamik olaraq tapırıq
 DS_UID=$(curl -s -u admin:admin http://localhost:3000/api/datasources/name/DefectDojo_Postgres | jq -r '.uid')
 
 if [ "$DS_UID" != "null" ] && [ ! -z "$DS_UID" ]; then
     echo "Verifying Data Source with UID: $DS_UID"
-    # 2. 'Health' check sorğusu göndəririk (Bu, 'Save & Test' düyməsi ilə eyni işi görür)
     CHECK_RESULT=$(curl -s -X GET -u admin:admin "http://localhost:3000/api/datasources/uid/$DS_UID/health")
     echo "Verification Result: $CHECK_RESULT"
     if echo "$CHECK_RESULT" | grep -q "OK"; then
@@ -84,7 +78,6 @@ else
 fi
 
 sleep 5
-#---------------------------------------------------------------------------------------
 echo "=== Step 6: CI Pipeline setup ==="
 bash scripts/pipeline/ci_setup.sh
 
