@@ -9,7 +9,7 @@ datasources:
     user: defectdojo
     isDefault: true
     secureJsonData:
-      password: defectdojo
+      password: ${DOJO_DB_PASSWORD}
     jsonData:
       sslmode: 'disable'
       postgresVersion: 15
