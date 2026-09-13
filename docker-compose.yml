@@ -1,11 +1,11 @@
 include:
   - path: ./scripts/vault/vault.yml
-    project_directory: .  # Force it to use the root as the base
-    env_file: .env        # Force it to use the root .env file
+    project_directory: .
+    env_file: .env        
   - path: ./scripts/gitlab/gitlab.yml
     project_directory: .
     env_file: .env
-  - path: ./scripts/grafana/grafana.yml  # <--- Yeni əlavə
+  - path: ./scripts/grafana/grafana.yml  
     project_directory: .
     env_file: .env
 
