@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "High & Critical Total",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": "DefectDojo_Postgres",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT count(*) as total FROM dojo_finding WHERE severity IN ('High', 'Critical') AND active = true AND duplicate = false;",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        }
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "Vulnerability Distribution",
+      "gridPos": { "h": 6, "w": 10, "x": 6, "y": 0 },
+      "datasource": "DefectDojo_Postgres",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT severity, count(*) as total FROM dojo_finding WHERE active = true AND duplicate = false GROUP BY severity;",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "values": true },
+        "displayLabels": ["percent"]
+      }
+    },
+    {
+      "type": "table",
+      "title": "Recent Vulnerabilities List",
+      "gridPos": { "h": 10, "w": 16, "x": 0, "y": 6 },
+      "datasource": "DefectDojo_Postgres",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT f.title AS \"Finding\", f.severity AS \"Severity\", f.component_name AS \"Component\", t.title AS \"Test\", e.name AS \"Engagement\", CASE WHEN f.false_p = true THEN 'False Positive' WHEN f.risk_accepted = true THEN 'Accepted' ELSE 'Active' END AS \"Status\", f.date AS \"Date\" FROM dojo_finding f JOIN dojo_test t ON f.test_id = t.id JOIN dojo_engagement e ON t.engagement_id = e.id WHERE f.active = true ORDER BY f.date DESC;",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "title": "Security Overview",
+  "schemaVersion": 36
+}

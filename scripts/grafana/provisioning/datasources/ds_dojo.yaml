@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: DefectDojo_Postgres
+    type: postgres
+    access: proxy
+    url: django-defectdojo-postgres-1:5432
+    database: defectdojo
+    user: defectdojo
+    isDefault: true
+    secureJsonData:
+      password: ${DOJO_DB_PASSWORD}
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 15
+    editable: true
