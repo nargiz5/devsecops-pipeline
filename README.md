@@ -98,6 +98,19 @@ The `gitlab-ci.yml` defines a three-stage security pipeline that runs against an
 
 **Stage 3 — `gate`**: Queries DefectDojo for active High-severity findings. If any are found, a formatted **Telegram alert** is sent with the vulnerability list. The pipeline passes or fails accordingly.
 
+
+### Pipeline flow
+
+```mermaid
+flowchart LR
+    A[Push to GitLab] --> B[test: Semgrep SAST]
+    B --> C[upload: reimport-scan to DefectDojo]
+    C --> D{gate: active High findings?}
+    D -- yes --> E[Telegram alert with findings]
+    D -- no --> F[Pipeline passes]
+    C --> G[Grafana security dashboard]
+```
+
 ---
 
 ## 🚀 Quick Start
