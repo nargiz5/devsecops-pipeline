@@ -152,7 +152,7 @@ nano .env
 | `ROOT_PASSWORD` | GitLab root account password — set a strong value |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_EMAIL` | Admin GitLab user created during bootstrap |
 | `USER_USERNAME` / `USER_PASSWORD` / `USER_EMAIL` | Standard GitLab user created during bootstrap |
-| `IMPORT_URL` | Git URL of the target project to import for pipeline testing |
+| `IMPORT_URL` | Git URL of the target project to import for pipeline testing (by default [django.nv](https://gitlab.practical-devsecops.training/pdso/django.nv), an intentionally vulnerable Django app published by Practical DevSecOps) |
 | `IMPORT_PROJECT_NAME` | Name to assign the imported project in GitLab |
 | `GITLAB_URL` / `REGISTRY_URL` | Derived from `HOST_IP` + ports — usually no need to edit directly |
 | `DOJO_PORT` | Port for the DefectDojo web UI (default: `8080`) |
@@ -198,7 +198,7 @@ All sensitive tokens (DefectDojo API key, GitLab tokens, Docker credentials) are
 
 Real credentials live only in the untracked `.env` file (see `.env.example` for the required schema) and in Vault at runtime. Never commit them.
 
-This means no credentials are hardcoded in scripts — they are retrieved from Vault via the `VAULT_TOKEN` at runtime.
+This means no credentials are hardcoded in the scripts themselves; they are retrieved from Vault via the `VAULT_TOKEN` at runtime. One exception applies to the generated CI configuration: see [Security considerations](#️-security-considerations-lab-use-only).
 
 ---
 
@@ -213,13 +213,16 @@ To set up a bot: use [@BotFather](https://t.me/BotFather) on Telegram, create a 
 
 ---
 
+## ⚠️ Security considerations (lab use only)
+
+- Vault runs in dev mode and the Docker registry is plain HTTP (insecure) — do not expose this stack to the internet or use it in production.
+- **Lab shortcut:** `ci_setup.sh` writes the registry credentials and the Telegram token into the generated `.gitlab-ci.yml` as plain variables, so anyone with read access to the GitLab project can see them. In production, store these as masked and protected GitLab CI/CD variables instead.
+- Container images use the `:latest` tag for convenience. Pin exact versions or digests for reproducible and supply-chain-safe deployments.
+- Change every default password before first start.
+- If a token or password was ever committed, revoke/rotate it; deleting the file does not remove it from git history.
+
+---
 
 ## 📄 License
 
 Released under the [MIT License](LICENSE). Intended for educational and lab use.
-
-## ⚠️ Security considerations (lab use only)
-
-- Vault runs in dev mode and the Docker registry is plain HTTP (insecure) — do not expose this stack to the internet or use it in production.
-- Change every default password before first start.
-- If a token or password was ever committed, revoke/rotate it; deleting the file does not remove it from git history.
