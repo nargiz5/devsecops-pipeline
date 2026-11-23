@@ -38,7 +38,7 @@ cd ~/vault-docker 2>/dev/null && sudo docker compose down -v --remove-orphans ||
 
 cd ~ || true
 
-# Grafana volume-nu spesifik silmək üçün 
+# Remove the stack started from this repo, including the Grafana volume
 cd ~/devsecops-pipeline 2>/dev/null && sudo docker compose down -v --remove-orphans || true
 
 
