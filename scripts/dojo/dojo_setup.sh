@@ -46,8 +46,6 @@ sudo docker compose down -v --remove-orphans
 # Remove only DefectDojo-related volumes
 sudo docker volume rm $(docker volume ls -q | grep django-defectdojo) 2>/dev/null || true
 
-# Clean unused Docker resources
-sudo docker system prune -f
 
 # Small delay to avoid race conditions
 sleep 5

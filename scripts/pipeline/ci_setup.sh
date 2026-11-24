@@ -37,12 +37,12 @@ TMP_DOCKERFILE=$(mktemp)
 cat <<EOF > $TMP_DOCKERFILE
 FROM registry.gitlab.com/security-products/semgrep:latest
 EOF
-sudo docker build -f $TMP_DOCKERFILE -t "$IMAGE_PREFIX/semgrepp:latest" .
+sudo docker build -f $TMP_DOCKERFILE -t "$IMAGE_PREFIX/semgrep:latest" .
 rm -f $TMP_DOCKERFILE
 
 # Login & Push
 echo "$REGISTRY_PASS" | sudo docker login "$PRIVATE_REGISTRY" -u "$REGISTRY_USER" --password-stdin
-sudo docker push "$IMAGE_PREFIX/semgrepp:latest"
+sudo docker push "$IMAGE_PREFIX/semgrep:latest"
 
 AUTH_B64=$(echo -n "$REGISTRY_USER:$REGISTRY_PASS" | base64)
 
@@ -73,7 +73,7 @@ variables:
 # ---------------- TEST 1 ----------------
 semgrep-sast:
   stage: test
-  image: \$SAST_ANALYZER_IMAGE_PREFIX/semgrepp:latest
+  image: \$SAST_ANALYZER_IMAGE_PREFIX/semgrep:latest
   artifacts:
     reports:
       sast: gl-sast-report-1.json
@@ -112,43 +112,41 @@ security-gate:
   script:
     - apk add --no-cache curl jq
     - |
-      echo "🔍 Verifying security status..."
+      echo "Verifying security status..."
 
-      # 1. Query DefectDojo
-      RESPONSE=$(curl -s -H "Authorization: Token $DOJO_KEY" \
-        "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
+      # 1. Query DefectDojo for active, verified High findings from this scan
+      RESPONSE=\$(curl -s -H "Authorization: Token $DOJO_KEY" "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
 
-      # 2. Extract Count
-      COUNT=$(echo "$RESPONSE" | jq '.count // 0')
+      # 2. Extract the count (0 if DefectDojo returned nothing)
+      COUNT=\$(echo "\$RESPONSE" | jq '.count // 0')
+      COUNT=\${COUNT:-0}
 
-      if [ "$COUNT" -gt 0 ]; then
-        # Fetch titles, format as bullet points, and escape HTML special characters
-        VULN_LIST=$(echo "$RESPONSE" | jq -r '.results[0:5] | .[] | "• " + .title' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+      if [ "\$COUNT" -gt 0 ]; then
+        # First five titles as bullet points, with HTML special characters escaped
+        VULN_LIST=\$(echo "\$RESPONSE" | jq -r '.results[0:5] | .[] | "• " + .title' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+        MSG="🚨 <b>SECURITY GATE FAILED</b>
 
-        # Build the message block - No special commands, just a standard variable
-        MSG="🚨 <b>SECURITY GATE ALERT</b>
+      <b>Project:</b> <code>$PRODUCT_NAME</code>
+      <b>Findings:</b> \$COUNT High vulnerabilities
 
-        <b>Project:</b> <code>$PRODUCT_NAME</code>
-        <b>Findings:</b> $COUNT High vulnerabilities
-
-        <b>Top Vulnerabilities:</b>
-        $VULN_LIST"
-
+      <b>Top Vulnerabilities:</b>
+      \$VULN_LIST"
       else
         MSG="✅ <b>SECURITY GATE PASSED</b>
 
-        <b>Project:</b> $PRODUCT_NAME
-        No active findings detected."
+      <b>Project:</b> $PRODUCT_NAME
+      No active High findings."
       fi
 
-      # 3. Send to Telegram
-      # --data-urlencode is vital here to handle the newlines in the MSG variable
-      curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
-        --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
-        --data-urlencode "parse_mode=HTML" \
-        --data-urlencode "text=$MSG"
+      # 3. Notify Telegram (--data-urlencode keeps the newlines in MSG)
+      curl -s -X POST "https://api.telegram.org/bot\$TELEGRAM_TOKEN/sendMessage" --data-urlencode "chat_id=\$TELEGRAM_CHAT_ID" --data-urlencode "parse_mode=HTML" --data-urlencode "text=\$MSG"
 
-
+      # 4. Block the pipeline when High findings exist
+      if [ "\$COUNT" -gt 0 ]; then
+        echo "Security gate failed: \$COUNT active High findings."
+        exit 1
+      fi
+      echo "Security gate passed."
 EOF
 
 
@@ -160,8 +158,8 @@ curl --silent --request PUT "$GITLAB_URL/api/v4/projects/$PROJECT_ID/repository/
   --header "Content-Type: application/json" \
   --data "{
     \"branch\": \"main\",
-    \"commit_message\": \"Add automated DevSecOps Pipeline with two independent tests\",
+    \"commit_message\": \"Add automated DevSecOps pipeline with a blocking security gate\",
     \"content\": $ENCODED_CI
   }"
 
-echo "✅ .gitlab-ci.yml pushed! Pipeline now has two separate tests."
+echo "✅ .gitlab-ci.yml pushed! Pipeline: Semgrep SAST, DefectDojo upload, blocking security gate."

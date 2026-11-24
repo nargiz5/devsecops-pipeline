@@ -96,7 +96,7 @@ The `gitlab-ci.yml` defines a three-stage security pipeline that runs against an
 
 **Stage 2 — `upload`**: Pushes the SAST report to **DefectDojo** via its `reimport-scan` REST API, auto-creating the product and engagement context.
 
-**Stage 3 — `gate`**: Queries DefectDojo for active High-severity findings. If any are found, a formatted **Telegram alert** is sent with the vulnerability list. The pipeline passes or fails accordingly.
+**Stage 3 — `gate`**: Queries DefectDojo for active High-severity findings. A **Telegram message** reports the result. If any High findings are active, the job exits with an error and the pipeline fails.
 
 
 ### Pipeline flow
@@ -106,7 +106,7 @@ flowchart LR
     A[Push to GitLab] --> B[test: Semgrep SAST]
     B --> C[upload: reimport-scan to DefectDojo]
     C --> D{gate: active High findings?}
-    D -- yes --> E[Telegram alert with findings]
+    D -- yes --> E[Telegram alert, pipeline fails]
     D -- no --> F[Pipeline passes]
     C --> G[Grafana security dashboard]
 ```
@@ -207,7 +207,7 @@ This means no credentials are hardcoded in the scripts themselves; they are retr
 The security gate stage sends a Telegram message after every pipeline run:
 
 - ✅ **PASSED** — no active High findings in DefectDojo
-- 🚨 **ALERT** — one or more High findings detected, with titles listed
+- 🚨 **FAILED** — one or more High findings detected, with titles listed; the pipeline is blocked
 
 To set up a bot: use [@BotFather](https://t.me/BotFather) on Telegram, create a bot, and obtain the token and your chat ID.
 

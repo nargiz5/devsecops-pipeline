@@ -44,18 +44,6 @@ cd ~/devsecops-pipeline 2>/dev/null && sudo docker compose down -v --remove-orph
 
 cd ~ || true
 # -----------------------------
-# Remove Volumes
-# -----------------------------
-echo "Removing unused volumes..."
-sudo docker volume prune -f || true
-
-# -----------------------------
-# Remove Networks
-# -----------------------------
-echo "Cleaning networks..."
-sudo docker network prune -f || true
-
-# -----------------------------
 # Remove Directories
 # -----------------------------
 echo "Removing project directories..."
