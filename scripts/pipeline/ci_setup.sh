@@ -87,43 +87,55 @@ semgrep-sast:
 
 upload-test:
   stage: upload
-  image: curlimages/curl:latest
+  image: alpine:3.20
   needs:
     - job: semgrep-sast
       artifacts: true
   script:
-    - >
-      curl -X POST "$DOJO_URL/api/v2/reimport-scan/"
-      -H "Authorization: Token $DOJO_KEY"
-      -F "active=true"
-      -F "verified=true"
-      -F "scan_type=GitLab SAST Report"
-      -F "minimum_severity=High"
-      -F "product_name=$PRODUCT_NAME"
-      -F "engagement_name=$ENGAGEMENT_NAME"
-      -F "test_title=Semgrep Scan - Test 1"
-      -F "auto_create_context=true"
-      -F "file=@gl-sast-report-1.json"
+    - apk add --no-cache curl jq > /dev/null
+    - |
+      HTTP_CODE=\$(curl -s -o dojo-import.json -w '%{http_code}' -X POST "$DOJO_URL/api/v2/reimport-scan/" -H "Authorization: Token $DOJO_KEY" -F "active=true" -F "verified=true" -F "scan_type=GitLab SAST Report" -F "minimum_severity=High" -F "product_name=$PRODUCT_NAME" -F "engagement_name=$ENGAGEMENT_NAME" -F "test_title=Semgrep Scan - Test 1" -F "auto_create_context=true" -F "file=@gl-sast-report-1.json")
+      case "\$HTTP_CODE" in
+        200|201) ;;
+        *) echo "DefectDojo import failed (HTTP \$HTTP_CODE)"; cat dojo-import.json; exit 1 ;;
+      esac
+
+      # The gate checks only the findings of this import, not every product that uses the same test title
+      TEST_ID=\$(jq -r '.test_id // .test // empty' dojo-import.json)
+      if [ -z "\$TEST_ID" ]; then
+        echo "DefectDojo did not return a test id"
+        exit 1
+      fi
+      echo "DOJO_TEST_ID=\$TEST_ID" > dojo.env
+  artifacts:
+    reports:
+      dotenv: dojo.env
 
 security-gate:
   stage: gate
-  image: alpine:latest
+  image: alpine:3.20
   needs: ["upload-test"]
   script:
-    - apk add --no-cache curl jq
+    - apk add --no-cache curl jq > /dev/null
     - |
-      echo "Verifying security status..."
+      echo "Verifying security status for DefectDojo test \$DOJO_TEST_ID..."
 
-      # 1. Query DefectDojo for active, verified High findings from this scan
-      RESPONSE=\$(curl -s -H "Authorization: Token $DOJO_KEY" "$DOJO_URL/api/v2/findings/?active=true&verified=true&test__title=Semgrep%20Scan%20-%20Test%201")
+      # 1. Query DefectDojo. The gate fails closed: no valid answer means no pass.
+      HTTP_CODE=\$(curl -s -o findings.json -w '%{http_code}' -H "Authorization: Token $DOJO_KEY" "$DOJO_URL/api/v2/findings/?active=true&verified=true&test=\$DOJO_TEST_ID&limit=5")
+      if [ "\$HTTP_CODE" != "200" ]; then
+        echo "Could not query DefectDojo (HTTP \$HTTP_CODE). Failing closed."
+        exit 1
+      fi
 
-      # 2. Extract the count (0 if DefectDojo returned nothing)
-      COUNT=\$(echo "\$RESPONSE" | jq '.count // 0')
-      COUNT=\${COUNT:-0}
+      # 2. The count must be a number; anything else also fails closed
+      if ! COUNT=\$(jq -e '.count | numbers' findings.json); then
+        echo "Unexpected response from DefectDojo. Failing closed."
+        exit 1
+      fi
 
       if [ "\$COUNT" -gt 0 ]; then
         # First five titles as bullet points, with HTML special characters escaped
-        VULN_LIST=\$(echo "\$RESPONSE" | jq -r '.results[0:5] | .[] | "• " + .title' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+        VULN_LIST=\$(jq -r '.results[0:5] | .[] | "• " + .title' findings.json | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
         MSG="🚨 <b>SECURITY GATE FAILED</b>
 
       <b>Project:</b> <code>$PRODUCT_NAME</code>
@@ -139,7 +151,7 @@ security-gate:
       fi
 
       # 3. Notify Telegram (--data-urlencode keeps the newlines in MSG)
-      curl -s -X POST "https://api.telegram.org/bot\$TELEGRAM_TOKEN/sendMessage" --data-urlencode "chat_id=\$TELEGRAM_CHAT_ID" --data-urlencode "parse_mode=HTML" --data-urlencode "text=\$MSG"
+      curl -s -X POST "https://api.telegram.org/bot\$TELEGRAM_TOKEN/sendMessage" --data-urlencode "chat_id=\$TELEGRAM_CHAT_ID" --data-urlencode "parse_mode=HTML" --data-urlencode "text=\$MSG" > /dev/null
 
       # 4. Block the pipeline when High findings exist
       if [ "\$COUNT" -gt 0 ]; then

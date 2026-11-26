@@ -96,7 +96,7 @@ The `gitlab-ci.yml` defines a three-stage security pipeline that runs against an
 
 **Stage 2 — `upload`**: Pushes the SAST report to **DefectDojo** via its `reimport-scan` REST API, auto-creating the product and engagement context.
 
-**Stage 3 — `gate`**: Queries DefectDojo for active High-severity findings. A **Telegram message** reports the result. If any High findings are active, the job exits with an error and the pipeline fails.
+**Stage 3 — `gate`**: Queries DefectDojo for active High-severity findings from this pipeline's import only. The gate fails closed: if DefectDojo cannot be queried or returns an unexpected answer, the pipeline fails. A **Telegram message** reports the result. If any High findings are active, the job exits with an error and the pipeline fails.
 
 
 ### Pipeline flow
@@ -216,7 +216,7 @@ To set up a bot: use [@BotFather](https://t.me/BotFather) on Telegram, create a 
 ## ⚠️ Security considerations (lab use only)
 
 - Vault runs in dev mode and the Docker registry is plain HTTP (insecure) — do not expose this stack to the internet or use it in production.
-- **Lab shortcut:** `ci_setup.sh` writes the registry credentials and the Telegram token into the generated `.gitlab-ci.yml` as plain variables, so anyone with read access to the GitLab project can see them. In production, store these as masked and protected GitLab CI/CD variables instead.
+- **Lab shortcut:** `ci_setup.sh` writes the DefectDojo API key, the registry credentials and the Telegram token into the generated `.gitlab-ci.yml` as plain variables, so anyone with read access to the GitLab project can see them. In production, store these as masked and protected GitLab CI/CD variables instead.
 - Container images use the `:latest` tag for convenience. Pin exact versions or digests for reproducible and supply-chain-safe deployments.
 - Change every default password before first start.
 - If a token or password was ever committed, revoke/rotate it; deleting the file does not remove it from git history.
